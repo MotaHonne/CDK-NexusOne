@@ -18,21 +18,24 @@ class NexusOneBaseStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # ===================================================================
-        # 1. IAM ROLE PARA EL AGENTE DE BEDROCK
+        # 1. IAM ROLE PARA EL AGENTE DE BEDROCK AGENTCORE
         # ===================================================================
-        # El rol que asume el servicio Bedrock para invocar modelos (Claude)
         agent_role = iam.Role(
             self, f"NexusOneAgentRole_{client_name}",
             role_name=f"nexus-one-agent-role-{client_name}",
-            assumed_by=iam.ServicePrincipal("bedrock.amazonaws.com"),
-            description=f"Rol de ejecución para el agente Bedrock de {client_name}"
+            assumed_by=iam.ServicePrincipal("bedrock-agentcore.amazonaws.com"),
+            description=f"Rol de ejecución para el Harness de AgentCore de {client_name}"
         )
 
-        # Permiso explícito para que el agente invoque el modelo en Bedrock
         agent_role.add_to_policy(
             iam.PolicyStatement(
-                actions=["bedrock:InvokeModel"],
-                resources=["arn:aws:bedrock:*::foundation-model/*"]
+                actions=["bedrock-agentcore:GetMemory",
+                        "bedrock-agentcore:ListEvents",
+                        "bedrock-agentcore:ListMemories",
+                        "bedrock-agentcore:CreateEvent",
+                        "bedrock:InvokeModelWithResponseStream",
+                        "bedrock-agentcore:CreateMemory"],
+                resources=["*"]
             )
         )
 
@@ -42,24 +45,30 @@ class NexusOneBaseStack(Stack):
         # Creamos el agente declarativo con memoria de sesión administrada
         nexus_agent = bedrock_ac.CfnHarness(
             self, f"NexusOneHarness_{client_name}",
-            harness_name=f"NexusONE-{client_name.upper()}-Demo",
+            harness_name=f"NexusONE_{client_name.upper()}_Demo",
             execution_role_arn=agent_role.role_arn,
-            system_prompt=(
-                "Eres Nexus ONE, un asistente virtual profesional y eficiente. "
-                "Responde las consultas del usuario de forma clara, concisa y amable. "
-                "Mantén el contexto de la conversación utilizando la memoria disponible."
-            ),
+            system_prompt=[
+                bedrock_ac.CfnHarness.HarnessSystemContentBlockProperty(
+                    text=(
+                        "Eres Nexus ONE, un asistente virtual profesional y eficiente. "
+                        "Responde las consultas del usuario de forma clara, concisa y amable. "
+                        "Mantén el contexto de la conversación utilizando la memoria disponible."
+                    )
+                )
+            ],
             # Configuración del modelo base
             model=bedrock_ac.CfnHarness.HarnessModelConfigurationProperty(
                 bedrock_model_config=bedrock_ac.CfnHarness.HarnessBedrockModelConfigProperty(
-                    model_id="us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+                    model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0",
                     temperature=0.3,
                     max_tokens=2000
                 )
             ),
             # Memoria administrada nativa de AgentCore
             memory=bedrock_ac.CfnHarness.HarnessMemoryConfigurationProperty(
-                storage_days=30
+                managed_memory_configuration=bedrock_ac.CfnHarness.HarnessManagedMemoryConfigurationProperty(
+                    event_expiry_duration=30
+                )
             )
         )
 
@@ -76,7 +85,7 @@ class NexusOneBaseStack(Stack):
             memory_size=256,
             environment={
                 "AGENT_ID": nexus_agent.attr_harness_id,
-                "AGENT_ARN": nexus_agent.attr_harness_arn,
+                "AGENT_ARN": nexus_agent.attr_arn,
                 "AGENT_ALIAS_ID": "TSTALIASID",
                 "META_VERIFY_TOKEN": "nexus_one_demo_token",
                 "META_APP_SECRET": "nexus_one_secret",
@@ -90,8 +99,8 @@ class NexusOneBaseStack(Stack):
             iam.PolicyStatement(
                 actions=["bedrock:InvokeAgent"],
                 resources=[
-                    nexus_agent.attr_harness_arn,
-                    f"{nexus_agent.attr_harness_arn}/*"
+                    nexus_agent.attr_arn,
+                    f"{nexus_agent.attr_arn}/*"
                 ]
             )
         )
@@ -140,6 +149,6 @@ class NexusOneBaseStack(Stack):
 
         CfnOutput(
             self, "AgentArnOutput",
-            value=nexus_agent.attr_harness_arn,
+            value=nexus_agent.attr_arn,
             description="ARN único del Agente Bedrock creado"
         )
