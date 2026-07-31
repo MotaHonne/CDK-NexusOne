@@ -5,7 +5,7 @@ from aws_cdk import (
     aws_iam as iam,
     aws_lambda as _lambda,
     aws_apigateway as apigw,
-    aws_bedrock as bedrock,
+    aws_bedrockagentcore as bedrock_ac,
 )
 from constructs import Construct
 
@@ -40,7 +40,7 @@ class NexusOneBaseStack(Stack):
         # 2. DEFINICIÓN DEL AGENTE (AWS BEDROCK AGENT)
         # ===================================================================
         # Creamos el agente declarativo con memoria de sesión administrada
-        nexus_agent = bedrock.CfnHarness(
+        nexus_agent = bedrock_ac.CfnHarness(
             self, f"NexusOneHarness_{client_name}",
             harness_name=f"NexusONE-{client_name.upper()}-Demo",
             execution_role_arn=agent_role.role_arn,
@@ -50,15 +50,15 @@ class NexusOneBaseStack(Stack):
                 "Mantén el contexto de la conversación utilizando la memoria disponible."
             ),
             # Configuración del modelo base
-            model=bedrock.CfnHarness.HarnessModelConfigurationProperty(
-                bedrock_model_config=bedrock.CfnHarness.HarnessBedrockModelConfigProperty(
+            model=bedrock_ac.CfnHarness.HarnessModelConfigurationProperty(
+                bedrock_model_config=bedrock_ac.CfnHarness.HarnessBedrockModelConfigProperty(
                     model_id="us.anthropic.claude-3-5-sonnet-20241022-v2:0",
                     temperature=0.3,
                     max_tokens=2000
                 )
             ),
             # Memoria administrada nativa de AgentCore
-            memory=bedrock.CfnHarness.HarnessMemoryConfigurationProperty(
+            memory=bedrock_ac.CfnHarness.HarnessMemoryConfigurationProperty(
                 storage_days=30
             )
         )
