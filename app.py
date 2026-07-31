@@ -1,28 +1,23 @@
 #!/usr/bin/env python3
-import os
-
 import aws_cdk as cdk
-
-from cdk_nexus_one.cdk_nexus_one_stack import CdkNexusOneStack
-
+from cdk_nexus_one.cdk_nexus_one_stack import NexusOneBaseStack
+from aws_cdk import Tags
 
 app = cdk.App()
-CdkNexusOneStack(app, "CdkNexusOneStack",
-    # If you don't specify 'env', this stack will be environment-agnostic.
-    # Account/Region-dependent features and context lookups will not work,
-    # but a single synthesized template can be deployed anywhere.
 
-    # Uncomment the next line to specialize this stack for the AWS Account
-    # and Region that are implied by the current CLI configuration.
+# 1. Capturamos la variable 'client' desde la terminal (por defecto será 'demo')
+client_name = app.node.try_get_context("client") or "demo"
+client_name = client_name.lower() # Normalizamos a minúsculas
 
-    #env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
+# 2. Instanciamos el Stack dándole un nombre único por cliente (ej. NexusOneDemo-Inegi)
+stack = NexusOneBaseStack(
+    app, 
+    f"NexusOneDemo-{client_name.capitalize()}", 
+    client_name=client_name  # Le pasamos la variable al Stack
+)
 
-    # Uncomment the next line if you know exactly what Account and Region you
-    # want to deploy the stack to. */
-
-    #env=cdk.Environment(account='123456789012', region='us-east-1'),
-
-    # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
-    )
+# 3. ¡LA MAGIA DE FINOPS! 
+# Aplicamos la etiqueta a TODO lo que se cree dentro de este Stack
+Tags.of(stack).add("project", client_name)
 
 app.synth()
