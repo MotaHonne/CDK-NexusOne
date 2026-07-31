@@ -54,10 +54,8 @@ class NexusOneBaseStack(Stack):
             
             # Memoria administrada (retención por 30 días)
             memory_configuration=bedrock.CfnAgent.MemoryConfigurationProperty(
-                enabled_session_days=30,
-                session_summary_configuration=bedrock.CfnAgent.SessionSummaryConfigurationProperty(
-                    max_recent_sessions=10
-                )
+                enabled_memory_types=["SESSION_SUMMARY"], # O los tipos que estés habilitando
+                storage_days=30 # <-- Cambia 'enabled_session_days' por 'storage_days'
             )
         )
 

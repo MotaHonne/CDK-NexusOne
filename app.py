@@ -16,8 +16,7 @@ stack = NexusOneBaseStack(
     client_name=client_name  # Le pasamos la variable al Stack
 )
 
-# 3. ¡LA MAGIA DE FINOPS! 
-# Aplicamos la etiqueta a TODO lo que se cree dentro de este Stack
+# 3. Aplicamos la etiqueta a TODO lo que se cree dentro de este Stack
 Tags.of(stack).add("project", client_name)
 
 app.synth()
